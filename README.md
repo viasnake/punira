@@ -1,3 +1,3 @@
-# Discord AI Chat Bot
+# Project punira
 
-You can use this bot in [MCPlayNetwork Discord Server](https://discord.io/mcplaynetwork).
+AI characters can have personalities and emotions.
