@@ -96,8 +96,11 @@ class Chat(commands.Cog, name="Chat"):
         if not conversation_id:
             await self.SaveConversationId(user_id, channel_id, response_json["conversation_id"])
 
-        # Return the response
-        return response_json["answer"]
+        # Parse the response message
+        response_message = await self.ParseResponseMessage(response_json["answer"])
+
+        # Return the response message
+        return response_message
 
     async def SendApiRequest(self, bot, data: dict) -> requests.Response:
         headers = {
@@ -140,6 +143,23 @@ class Chat(commands.Cog, name="Chat"):
 
         # Return the conversation ID
         return conversation_id
+
+    async def ParseResponseMessage(self, message: str) -> str:
+
+        # Message format:
+        # <出力><発言>This is the response message</発言></出力>
+        # Return format:
+        # This is the response message
+
+        # Parse the XML message
+        message = message.replace("<出力>", "")
+        message = message.replace("</出力>", "")
+        message = message.replace("<発言>", "")
+        message = message.replace("</発言>", "")
+
+        # Return the message
+        return message
+
 
 async def setup(bot):
     await bot.add_cog(Chat(bot))
