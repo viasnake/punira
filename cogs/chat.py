@@ -53,8 +53,13 @@ class Chat(commands.Cog, name="Chat"):
         # チャンネル ID を取得する
         channel_id = str(context.channel.id)
 
-        # メッセージの内容を送信して、返答を取得する
-        response = await GetResponse(self.bot, query, user, channel_id)
+        try:
+            # メッセージの内容を送信して、返答を取得する
+            response = await GetResponse(self.bot, query, user, channel_id)
+        except Exception as e:
+            # エラー内容を返信する
+            await context.reply(f"{str(e)}")
+            return
 
         # 返答が空の場合、無視する
         if not response:
@@ -92,11 +97,18 @@ async def GetResponse(bot, query: str, user: str, channel_id: str) -> str:
         json=data,
     )
 
-    # 会話 ID が存在しない場合、会話 ID を保存する
-    if not conversation_id:
-        await SaveConversationId(channel_id, response.json()["conversation_id"])
+    if response.status_code != 200:
+        raise Exception(f"API request failed with status code {response.status_code}")
 
-    return response.json()["answer"]
+    response_json = response.json()
+
+    if "answer" not in response_json or not response_json["answer"]:
+        raise Exception("No valid response received from the API")
+
+    if not conversation_id:
+        await SaveConversationId(channel_id, response_json["conversation_id"])
+
+    return response_json["answer"]
 
 async def SaveConversationId(channel_id: str, conversation_id: str) -> None:
     # ファイルが存在しない場合、作成する
