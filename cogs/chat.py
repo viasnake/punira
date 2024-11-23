@@ -34,11 +34,20 @@ class Chat(commands.Cog, name="Chat"):
         if len(context.content) > 300:
             return
 
-        # Get the response from the API
+        #
         query = context.content
         user = context.author.display_name
         user_id = str(context.author.id)
         channel_id = str(context.channel.id)
+
+        # Check the query
+        try:
+            await self.CheckQuery(query)
+        except Exception as e:
+            await context.reply(f"{str(e)}")
+            return
+
+        # Get the response
         try:
             response = await self.GetResponse(
                 self.bot,
@@ -86,18 +95,22 @@ class Chat(commands.Cog, name="Chat"):
             self.bot.logger.error(f"API request failed with status code {response.status_code}, response: {response.text}, URL: {response.url}")
             raise Exception(f"API request failed with status code {response.status_code}")
         response_json = response.json()
+        answer = response_json["answer"]
 
         # If the response is not valid, raise an exception
-        if "answer" not in response_json or not response_json["answer"]:
+        if "answer" not in response_json or not answer:
             self.bot.logger.error(f"No valid response received from the API, response: {response.text}, URL: {response.url}")
             raise Exception("No valid response received from the API")
+
+        # Check the response text
+        await self.CheckResponseText(answer)
 
         # Save the conversation ID
         if not conversation_id:
             await self.SaveConversationId(user_id, channel_id, response_json["conversation_id"])
 
         # Parse the response message
-        response_message = await self.ParseResponseMessage(response_json["answer"])
+        response_message = await self.ParseResponseMessage(answer)
 
         # Return the response message
         return response_message
@@ -159,6 +172,48 @@ class Chat(commands.Cog, name="Chat"):
 
         # Return the message
         return message
+
+    async def CheckQuery(self, query: str) -> None:
+
+        # Check if the query is valid
+        if not query:
+            raise Exception("Query is empty")
+        if len(query) > 300:
+            raise Exception("Query is too long")
+
+        # Check XML tags
+        if "<" in query and ">" in query:
+            if query.index("<") < query.index(">"):
+                raise Exception("Invalid XML tags")
+
+        # Check for invalid characters
+        invalid_characters = ["\n", "\r", "\t"]
+        for invalid_character in invalid_characters:
+            if invalid_character in query:
+                raise Exception("Invalid characters")
+
+        # Check for invalid words
+        invalid_words = ["<出力>", "</出力>", "<発言>", "</発言>"]
+        for invalid_word in invalid_words:
+            if invalid_word in query:
+                raise Exception("Invalid words")
+
+    async def CheckResponseText(self, text: str) -> None:
+
+        # Valid text format:
+        # <出力><発言>This is the response message</発言></出力>
+
+        # Check if the text is valid
+        if not text:
+            raise Exception("Text is empty")
+
+        # Check if the text is in the valid format
+        if "<出力>" not in text or "</出力>" not in text:
+            raise Exception("Invalid text format")
+
+        # Check if the text is in the valid format
+        if "<発言>" not in text or "</発言>" not in text:
+            raise Exception("Invalid text format")
 
 
 async def setup(bot):
