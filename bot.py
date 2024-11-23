@@ -56,7 +56,7 @@ class LoggingFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-logger = logging.getLogger("discord_bot")
+logger = logging.getLogger("punira")
 logger.setLevel(logging.INFO)
 
 # Console handler
