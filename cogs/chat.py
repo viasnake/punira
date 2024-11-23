@@ -22,10 +22,16 @@ class Chat(commands.Cog, name="Chat"):
             return
         if context.attachments:
             return
+
+        # Format the message
+        context.content = context.content.replace(f"<@{self.bot.user.id}>", "")
+        context.content = context.content.strip()
         for mention in context.mentions:
             context.content = context.content.replace(
                 f"<@{mention.id}>", mention.display_name
             )
+
+        # Limit the message length
         if len(context.content) > 300:
             return
 
