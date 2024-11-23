@@ -53,7 +53,6 @@ class Chat(commands.Cog, name="Chat"):
                 self.bot,
                 query,
                 user,
-                user_id,
                 channel_id
             )
         except Exception as e:
@@ -66,7 +65,7 @@ class Chat(commands.Cog, name="Chat"):
         # Send the response
         await context.reply(response)
 
-    async def GetResponse(self, bot, query: str, user: str, user_id: str, channel_id: str) -> str:
+    async def GetResponse(self, bot, query: str, user: str, channel_id: str) -> str:
 
         # Get the conversation ID
         conversation_id = await self.GetConversationIdByChannelId(channel_id)
@@ -107,7 +106,7 @@ class Chat(commands.Cog, name="Chat"):
 
         # Save the conversation ID
         if not conversation_id:
-            await self.SaveConversationId(user_id, channel_id, response_json["conversation_id"])
+            await self.SaveConversationId(channel_id, response_json["conversation_id"])
 
         # Parse the response message
         response_message = await self.ParseResponseMessage(answer)
@@ -128,15 +127,15 @@ class Chat(commands.Cog, name="Chat"):
         )
         return response
 
-    async def SaveConversationId(self, user_id: str, channel_id: str, conversation_id: str) -> None:
+    async def SaveConversationId(self, channel_id: str, conversation_id: str) -> None:
 
         # File format:
-        # user_id:channel_id:conversation_id
+        # channel_id:conversation_id
         # if the user ID is not available, it will be set to 0
 
         # Save the conversation ID
         with open("conversation_id.txt", "a") as file:
-            file.write(f"{user_id}:{channel_id}:{conversation_id}\n")
+            file.write(f"{channel_id}:{conversation_id}\n")
 
     async def GetConversationIdByChannelId(self, channel_id: str) -> str:
 
@@ -148,7 +147,7 @@ class Chat(commands.Cog, name="Chat"):
         conversation_id = ""
         with open("conversation_id.txt", "r") as file:
             for line in file:
-                _, temp_channel_id, temp_conversation_id = line.split(":")
+                temp_channel_id, temp_conversation_id = line.split(":")
                 if temp_channel_id == channel_id:
                     conversation_id = temp_conversation_id
                     break
