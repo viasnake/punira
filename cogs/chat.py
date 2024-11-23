@@ -102,7 +102,12 @@ class Chat(commands.Cog, name="Chat"):
             raise Exception("No valid response received from the API")
 
         # Check the response text
-        await self.CheckResponseText(answer)
+        try:
+            await self.CheckResponseText(answer)
+        except Exception as e:
+            self.bot.logger.error(f"{str(e)}, Query: {query}, User: {user}, Channel ID: {channel_id}")
+            await self.DeleteConversationIdByChannelId(channel_id)
+            raise Exception(f"{str(e)}")
 
         # Save the conversation ID
         if not conversation_id:
@@ -126,6 +131,26 @@ class Chat(commands.Cog, name="Chat"):
             json=data,
         )
         return response
+
+    async def DeleteConversationIdByChannelId(self, channel_id: str) -> None:
+        # Delete the conversation ID
+        with open("conversation_id.txt", "r") as file:
+            lines = file.readlines()
+        with open("conversation_id.txt", "w") as file:
+            for line in lines:
+                temp_channel_id, _ = line.split(":")
+                if temp_channel_id != channel_id:
+                    file.write(line)
+
+    async def DeleteConversationIdByConversationId(self, conversation_id: str) -> None:
+        # Delete the conversation ID
+        with open("conversation_id.txt", "r") as file:
+            lines = file.readlines()
+        with open("conversation_id.txt", "w") as file:
+            for line in lines:
+                _, temp_conversation_id = line.split(":")
+                if temp_conversation_id != conversation_id:
+                    file.write(line)
 
     async def SaveConversationId(self, channel_id: str, conversation_id: str) -> None:
 
