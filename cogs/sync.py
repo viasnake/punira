@@ -24,6 +24,7 @@ class Sync(commands.Cog, name="Sync"):
 
         self.bot.logger.info("Syncing commands globally...")
         await self.bot.tree.sync()
+        await context.send("Synced commands globally.")
 
 
 async def setup(bot):
