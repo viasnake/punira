@@ -118,15 +118,15 @@ class Chat(commands.Cog, name="Chat"):
         # user_id:channel_id:conversation_id
         # if the user ID is not available, it will be set to 0
 
-        # If file does not exist, create it
-        with open("conversation_id.txt", "a") as file:
-            pass
-
         # Save the conversation ID
         with open("conversation_id.txt", "a") as file:
             file.write(f"{user_id}:{channel_id}:{conversation_id}\n")
 
     async def GetConversationIdByChannelId(self, channel_id: str) -> str:
+
+        # If file does not exist, create it and return an empty string
+        with open("conversation_id.txt", "a") as file:
+            pass
 
         # Get the conversation ID
         conversation_id = ""
