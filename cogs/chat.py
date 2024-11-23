@@ -1,4 +1,3 @@
-import discord
 import requests
 from discord.ext import commands
 from discord.ext.commands import Context
@@ -36,11 +35,18 @@ class Chat(commands.Cog, name="Chat"):
             return
 
         # Get the response from the API
-        user = context.author.display_name
         query = context.content
+        user = context.author.display_name
+        user_id = str(context.author.id)
         channel_id = str(context.channel.id)
         try:
-            response = await self.GetResponse(self.bot, query, user, channel_id)
+            response = await self.GetResponse(
+                self.bot,
+                query,
+                user,
+                user_id,
+                channel_id
+            )
         except Exception as e:
             await context.reply(f"{str(e)}")
             self.bot.logger.error(f"{str(e)}, Query: {query}, User: {user}, Channel ID: {channel_id}")
@@ -51,14 +57,10 @@ class Chat(commands.Cog, name="Chat"):
         # Send the response
         await context.reply(response)
 
-    async def GetResponse(self, bot, query: str, user: str, channel_id: str) -> str:
+    async def GetResponse(self, bot, query: str, user: str, user_id: str, channel_id: str) -> str:
 
         # Get the conversation ID
-        conversation_id = await self.GetConversationId(channel_id)
-        headers = {
-            'Authorization': f'Bearer {bot.config["API_KEY"]}',
-            'Content-Type': 'application/json'
-        }
+        conversation_id = await self.GetConversationIdByChannelId(channel_id)
         data = {
             "inputs": {
                 "username": user,
@@ -66,46 +68,70 @@ class Chat(commands.Cog, name="Chat"):
             "query": query,
             "response_mode": "blocking",
             "conversation_id": conversation_id,
-            "user": user,
+            "user": channel_id,  # Does not support multiple users
         }
-        API_URL = bot.config["API_URL"] + "/chat-messages"
 
         # Send the request
+        response = await self.SendApiRequest(bot, data)
+
+        # If the conversation ID is invalid, retry with an empty conversation ID
+        if response.status_code == 404 and response.json().get("message") == "Conversation Not Exists.":
+            # Retry with empty conversation ID
+            conversation_id = ""
+            data["conversation_id"] = ""
+            response = await self.SendApiRequest(bot, data)
+
+        # If the response is not valid, raise an exception
+        if response.status_code != 200:
+            self.bot.logger.error(f"API request failed with status code {response.status_code}, response: {response.text}, URL: {response.url}")
+            raise Exception(f"API request failed with status code {response.status_code}")
+        response_json = response.json()
+
+        # If the response is not valid, raise an exception
+        if "answer" not in response_json or not response_json["answer"]:
+            self.bot.logger.error(f"No valid response received from the API, response: {response.text}, URL: {response.url}")
+            raise Exception("No valid response received from the API")
+
+        # Save the conversation ID
+        if not conversation_id:
+            await self.SaveConversationId(user_id, channel_id, response_json["conversation_id"])
+
+        # Return the response
+        return response_json["answer"]
+
+    async def SendApiRequest(self, bot, data: dict) -> requests.Response:
+        headers = {
+            'Authorization': f'Bearer {bot.config["API_KEY"]}',
+            'Content-Type': 'application/json'
+        }
+        API_URL = bot.config["API_URL"] + "/chat-messages"
         response = requests.post(
             API_URL,
             headers=headers,
             json=data,
         )
+        return response
 
-        # Check the response
-        if response.status_code != 200:
-            self.bot.logger.error(f"API request failed with status code {response.status_code}, response: {response.text}, URL: {response.url}")
-            raise Exception(f"API request failed with status code {response.status_code}")
-        response_json = response.json()
-        if "answer" not in response_json or not response_json["answer"]:
-            self.bot.logger.error(f"No valid response received from the API, response: {response.text}, URL: {response.url}")
-            raise Exception("No valid response received from the API")
-        if not conversation_id:
-            await self.SaveConversationId(channel_id, response_json["conversation_id"])
+    async def SaveConversationId(self, user_id: str, channel_id: str, conversation_id: str) -> None:
 
-        # Return the response
-        return response_json["answer"]
-
-    async def SaveConversationId(self, channel_id: str, conversation_id: str) -> None:
+        # File format:
+        # user_id:channel_id:conversation_id
+        # if the user ID is not available, it will be set to 0
 
         # Save the conversation ID
         with open("conversation_id.txt", "a") as file:
-            file.write(f"{channel_id}:{conversation_id}\n")
+            file.write(f"{user_id}:{channel_id}:{conversation_id}\n")
 
-    async def GetConversationId(self, channel_id: str) -> str:
+    async def GetConversationIdByChannelId(self, channel_id: str) -> str:
 
         # Get the conversation ID
         conversation_id = ""
         with open("conversation_id.txt", "r") as file:
             for line in file:
-                temp_channel_id, temp_conversation_id = line.split(":")
-                if channel_id == temp_channel_id:
+                _, temp_channel_id, temp_conversation_id = line.split(":")
+                if temp_channel_id == channel_id:
                     conversation_id = temp_conversation_id
+                    break
         conversation_id = conversation_id.rstrip("\n")
 
         # Return the conversation ID
