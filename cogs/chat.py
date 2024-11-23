@@ -40,9 +40,10 @@ class Chat(commands.Cog, name="Chat"):
         query = context.content
         channel_id = str(context.channel.id)
         try:
-            response = await GetResponse(self.bot, query, user, channel_id)
+            response = await self.GetResponse(self.bot, query, user, channel_id)
         except Exception as e:
             await context.reply(f"{str(e)}")
+            self.bot.logger.error(f"{str(e)}, Query: {query}, User: {user}, Channel ID: {channel_id}")
             return
         if not response:
             return
@@ -50,66 +51,65 @@ class Chat(commands.Cog, name="Chat"):
         # Send the response
         await context.reply(response)
 
+    async def GetResponse(self, bot, query: str, user: str, channel_id: str) -> str:
 
-async def GetResponse(bot, query: str, user: str, channel_id: str) -> str:
+        # Get the conversation ID
+        conversation_id = await self.GetConversationId(channel_id)
+        headers = {
+            'Authorization': f'Bearer {bot.config["API_KEY"]}',
+            'Content-Type': 'application/json'
+        }
+        data = {
+            "inputs": {
+                "username": user,
+            },
+            "query": query,
+            "response_mode": "blocking",
+            "conversation_id": conversation_id,
+            "user": user,
+        }
+        API_URL = bot.config["API_URL"] + "/chat-messages"
 
-    # Get the conversation ID
-    conversation_id = await GetConversationId(channel_id)
-    headers = {
-        'Authorization': f'Bearer {bot.config["API_KEY"]}',
-        'Content-Type': 'application/json'
-    }
-    data = {
-        "inputs": {
-            "username": user,
-        },
-        "query": query,
-        "response_mode": "blocking",
-        "conversation_id": conversation_id,
-        "user": user,
-    }
-    API_URL = bot.config["API_URL"] + "/chat-messages"
+        # Send the request
+        response = requests.post(
+            API_URL,
+            headers=headers,
+            json=data,
+        )
 
-    # Send the request
-    response = requests.post(
-        API_URL,
-        headers=headers,
-        json=data,
-    )
+        # Check the response
+        if response.status_code != 200:
+            self.bot.logger.error(f"API request failed with status code {response.status_code}, response: {response.text}, URL: {response.url}")
+            raise Exception(f"API request failed with status code {response.status_code}")
+        response_json = response.json()
+        if "answer" not in response_json or not response_json["answer"]:
+            self.bot.logger.error(f"No valid response received from the API, response: {response.text}, URL: {response.url}")
+            raise Exception("No valid response received from the API")
+        if not conversation_id:
+            await self.SaveConversationId(channel_id, response_json["conversation_id"])
 
-    # Check the response
-    if response.status_code != 200:
-        raise Exception(f"API request failed with status code {response.status_code}")
-    response_json = response.json()
-    if "answer" not in response_json or not response_json["answer"]:
-        raise Exception("No valid response received from the API")
-    if not conversation_id:
-        await SaveConversationId(channel_id, response_json["conversation_id"])
+        # Return the response
+        return response_json["answer"]
 
-    # Return the response
-    return response_json["answer"]
+    async def SaveConversationId(self, channel_id: str, conversation_id: str) -> None:
 
-async def SaveConversationId(channel_id: str, conversation_id: str) -> None:
+        # Save the conversation ID
+        with open("conversation_id.txt", "a") as file:
+            file.write(f"{channel_id}:{conversation_id}\n")
 
-    # Save the conversation ID
-    with open("conversation_id.txt", "a") as file:
-        pass
-    with open("conversation_id.txt", "a") as file:
-        file.write(f"{channel_id}:{conversation_id}\n")
+    async def GetConversationId(self, channel_id: str) -> str:
 
-async def GetConversationId(channel_id: str) -> str:
+        # Get the conversation ID
+        conversation_id = ""
+        with open("conversation_id.txt", "r") as file:
+            for line in file:
+                temp_channel_id, temp_conversation_id = line.split(":")
+                if channel_id == temp_channel_id:
+                    conversation_id = temp_conversation_id
+        conversation_id = conversation_id.rstrip("\n")
 
-    # Get the conversation ID
-    conversation_id = ""
-    with open("conversation_id.txt", "r") as file:
-        for line in file:
-            temp_channel_id, temp_conversation_id = line.split(":")
-            if channel_id == temp_channel_id:
-                conversation_id = temp_conversation_id
-    conversation_id = conversation_id.rstrip("\n")
-
-    # Return the conversation ID
-    return conversation_id
+        # Return the conversation ID
+        return conversation_id
 
 async def setup(bot):
     await bot.add_cog(Chat(bot))
