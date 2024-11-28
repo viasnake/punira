@@ -38,7 +38,8 @@ class Chat(commands.Cog, name="Chat"):
         try:
             await self.CheckQuery(query)
         except Exception as e:
-            await context.reply(f"{str(e)}")
+            self.bot.logger.error(f"{str(e)}, Query: {query}, User: {user}, Channel ID: {channel_id}")
+            await context.send(f"<@226674196112080896> Message censored. ||debug: {str(e)}||")
             return
 
         # Get the response
@@ -50,8 +51,8 @@ class Chat(commands.Cog, name="Chat"):
                 channel_id
             )
         except Exception as e:
-            await context.reply(f"{str(e)}")
             self.bot.logger.error(f"{str(e)}, Query: {query}, User: {user}, Channel ID: {channel_id}")
+            await context.send(f"<@226674196112080896> Message censored. ||debug: {str(e)}||")
             return
         if not response:
             return
@@ -178,14 +179,12 @@ class Chat(commands.Cog, name="Chat"):
     async def ParseResponseMessage(self, message: str) -> str:
 
         # Message format:
-        # <出力><発言>This is the response message</発言></出力>
+        # <発言 名前="ぷにら">This is the response message</発言>
         # Return format:
         # This is the response message
 
         # Parse the XML message
-        message = message.replace("<出力>", "")
-        message = message.replace("</出力>", "")
-        message = message.replace("<発言>", "")
+        message = message.replace("<発言 名前=\"ぷにら\">", "")
         message = message.replace("</発言>", "")
 
         # Return the message
@@ -211,7 +210,7 @@ class Chat(commands.Cog, name="Chat"):
                 raise Exception("Invalid characters")
 
         # Check for invalid words
-        invalid_words = ["<出力>", "</出力>", "<発言>", "</発言>"]
+        invalid_words = ["<発言>", "</発言>"]
         for invalid_word in invalid_words:
             if invalid_word in query:
                 raise Exception("Invalid words")
@@ -219,20 +218,27 @@ class Chat(commands.Cog, name="Chat"):
     async def CheckResponseText(self, text: str) -> None:
 
         # Valid text format:
-        # <出力><発言>This is the response message</発言></出力>
+        # <発言 名前="ぷにら">This is the response message</発言>
 
         # Check if the text is valid
         if not text:
             raise Exception("Text is empty")
 
         # Check if the text is in the valid format
-        if "<出力>" not in text or "</出力>" not in text:
+        if "<発言 名前=\"ぷにら\">" not in text or "</発言>" not in text:
             raise Exception("Invalid text format")
 
-        # Check if the text is in the valid format
-        if "<発言>" not in text or "</発言>" not in text:
-            raise Exception("Invalid text format")
+        # Check for invalid characters
+        invalid_characters = ["\n", "\r", "\t"]
+        for invalid_character in invalid_characters:
+            if invalid_character in text:
+                raise Exception("Invalid characters")
 
+        # Check for invalid words
+        invalid_words = ["<発言>", "</発言>"]
+        for invalid_word in invalid_words:
+            if invalid_word in text:
+                raise Exception("Invalid words")
 
 async def setup(bot):
     await bot.add_cog(Chat(bot))
