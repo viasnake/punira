@@ -222,11 +222,5 @@ class Chat(commands.Cog, name="Chat"):
         if "<発言 名前=\"ぷにら\">" not in text or "</発言>" not in text:
             raise Exception("Invalid text format")
 
-        # Check for invalid words
-        invalid_words = ["<発言>", "</発言>"]
-        for invalid_word in invalid_words:
-            if invalid_word in text:
-                raise Exception("Invalid words")
-
 async def setup(bot):
     await bot.add_cog(Chat(bot))
