@@ -9,12 +9,6 @@ class Chat(commands.Cog, name="Chat"):
     @commands.Cog.listener("on_message")
     async def chat(self, context: Context) -> None:
         # Check if the message is valid
-        ALLOWED_CHANNEL_NAMES = ["punira"]
-        if not any(
-            context.channel.name.startswith(channel_name)
-            for channel_name in ALLOWED_CHANNEL_NAMES
-        ):
-            return
         if not any(mention.id == self.bot.user.id for mention in context.mentions):
             return
         if context.author.bot:
