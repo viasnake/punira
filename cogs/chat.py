@@ -39,7 +39,7 @@ class Chat(commands.Cog, name="Chat"):
             await self.CheckQuery(query)
         except Exception as e:
             self.bot.logger.error(f"{str(e)}, Query: {query}, User: {user}, Channel ID: {channel_id}")
-            await context.send(f"<@226674196112080896> Message censored. ||debug: {str(e)}||")
+            await context.channel.send(f"<@226674196112080896> Message censored. ||debug: {str(e)}||")
             return
 
         # Get the response
@@ -52,7 +52,7 @@ class Chat(commands.Cog, name="Chat"):
             )
         except Exception as e:
             self.bot.logger.error(f"{str(e)}, Query: {query}, User: {user}, Channel ID: {channel_id}")
-            await context.send(f"<@226674196112080896> Message censored. ||debug: {str(e)}||")
+            await context.channel.send(f"<@226674196112080896> Message censored. ||debug: {str(e)}||")
             return
         if not response:
             return
