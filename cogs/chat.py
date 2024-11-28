@@ -203,12 +203,6 @@ class Chat(commands.Cog, name="Chat"):
             if query.index("<") < query.index(">"):
                 raise Exception("Invalid XML tags")
 
-        # Check for invalid characters
-        invalid_characters = ["\n", "\r", "\t"]
-        for invalid_character in invalid_characters:
-            if invalid_character in query:
-                raise Exception("Invalid characters")
-
         # Check for invalid words
         invalid_words = ["<発言>", "</発言>"]
         for invalid_word in invalid_words:
@@ -227,12 +221,6 @@ class Chat(commands.Cog, name="Chat"):
         # Check if the text is in the valid format
         if "<発言 名前=\"ぷにら\">" not in text or "</発言>" not in text:
             raise Exception("Invalid text format")
-
-        # Check for invalid characters
-        invalid_characters = ["\n", "\r", "\t"]
-        for invalid_character in invalid_characters:
-            if invalid_character in text:
-                raise Exception("Invalid characters")
 
         # Check for invalid words
         invalid_words = ["<発言>", "</発言>"]
