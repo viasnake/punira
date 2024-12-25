@@ -24,6 +24,14 @@ class Chat(commands.Cog, name="Chat"):
                 f"<@{mention.id}>", mention.display_name
             )
 
+        # Check if the message is valid
+        if not context.content:
+            return
+        if context.content.isspace():
+            return
+        if not context.content.isascii():
+            return
+
         # Limit the message length
         if len(context.content) > 300:
             return
