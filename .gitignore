@@ -152,6 +152,7 @@ conversation_id.txt
 
 # config
 config.json
+config.dev.json
 
 # debug
 voice.py
